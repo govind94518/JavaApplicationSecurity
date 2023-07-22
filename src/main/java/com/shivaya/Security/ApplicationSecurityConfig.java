@@ -1,36 +1,35 @@
 package com.shivaya.Security;
 
+import com.shivaya.auth.ApplicationUserDetailsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 import static com.shivaya.Security.ApplicationUserPermission.COURSE_READ;
 import static com.shivaya.Security.ApplicationUserPermission.COURSE_WRITE;
 import static com.shivaya.Security.ApplicationUserRole.*;
 
-@RequiredArgsConstructor
 @Configuration
 @EnableWebSecurity
 public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
 
-    final PasswordEncoder passwordEncoder;
-
+    private  final PasswordEncoder passwordEncoder;
+    private  final ApplicationUserDetailsService applicationUserDetailsService;
+    ApplicationSecurityConfig( PasswordEncoder passwordEncoder,
+                               ApplicationUserDetailsService applicationUserDetailsService){
+        this.passwordEncoder=passwordEncoder;
+        this.applicationUserDetailsService = applicationUserDetailsService;
+    }
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 
@@ -69,28 +68,43 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
                         .logoutSuccessUrl("/login");
     }
 
+//    @Override
+//    @Bean
+//    protected UserDetailsService userDetailsService() {
+//        UserDetails shiva = User.builder()
+//                .username("shiv")
+//                .password(passwordEncoder.encode("password"))
+//                .roles(ADMIN.name())
+//                .authorities(ADMIN.getGrantedAuthority())
+//                .build();
+//
+//        UserDetails   rahul  =User.builder()
+//                .username("rahul")
+//                .password(passwordEncoder.encode("password"))
+//                .authorities(STUDENT.getGrantedAuthority())
+//                .build();
+//
+//        UserDetails  govind =User.builder()
+//                .username("govind")
+//                .password(passwordEncoder.encode("password"))
+//                .authorities(ADMINTRAINEE.getGrantedAuthority())
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(shiva,govind,rahul);
+//    }
+
+
     @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.authenticationProvider(daoAuthenticationProvider());
+
+    }
+
     @Bean
-    protected UserDetailsService userDetailsService() {
-        UserDetails shiva = User.builder()
-                .username("shiv")
-                .password(passwordEncoder.encode("password"))
-                .roles(ADMIN.name())
-                .authorities(ADMIN.getGrantedAuthority())
-                .build();
-
-        UserDetails   rahul  =User.builder()
-                .username("rahul")
-                .password(passwordEncoder.encode("password"))
-                .authorities(STUDENT.getGrantedAuthority())
-
-                .build();
-        UserDetails  govind =User.builder()
-                .username("govind")
-                .password(passwordEncoder.encode("password"))
-                .authorities(ADMINTRAINEE.getGrantedAuthority())
-                .build();
-
-        return new InMemoryUserDetailsManager(shiva,govind,rahul);
+    DaoAuthenticationProvider daoAuthenticationProvider(){
+        DaoAuthenticationProvider provider=new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsService(applicationUserDetailsService);
+        return provider;
     }
 }
